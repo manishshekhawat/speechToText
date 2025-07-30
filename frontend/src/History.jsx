@@ -4,13 +4,13 @@ const History = () => {
   const [data, setData] = useState([]);
 
   const fetchHistory = async () => {
-    const res = await fetch("http://localhost:3000/data");
+    const res = await fetch("https://speechtotext-2.onrender.com/data");
     const result = await res.json();
     setData(result);
   };
 
   const handleDelete = async (id) => {
-    await fetch(`http://localhost:3000/delete/${id}`, { method: "DELETE" });
+    await fetch(`https://speechtotext-2.onrender.com/delete/${id}`, { method: "DELETE" });
     fetchHistory();
   };
 
