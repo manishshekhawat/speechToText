@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function SpeechToText() {
   const API_KEY = "76940893cd804e2b933e3e55b027c56e";
@@ -11,6 +12,7 @@ function SpeechToText() {
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const audioChunks = useRef([]);
+  const navigate = useNavigate();
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -21,10 +23,8 @@ function SpeechToText() {
 
     mediaRecorderRef.current = new MediaRecorder(stream);
     audioChunks.current = [];
-    console.log(mediaRecorderRef.current);
 
     mediaRecorderRef.current.ondataavailable = (e) => {
-      console.log(e);
       audioChunks.current.push(e.data);
     };
 
@@ -34,7 +34,6 @@ function SpeechToText() {
         type: "audio/wav",
       });
       setFile(audioFile);
-      console.log(audioBlob);
       const url = URL.createObjectURL(audioBlob);
       setAudioURL(url);
       return () => URL.revokeObjectURL(url);
@@ -58,32 +57,30 @@ function SpeechToText() {
     setAudioURL(URL.createObjectURL(e.target.files[0]));
   };
 
-
-  const addData=async(speechText,audioUrl)=>{
-    try{
-      const response=await fetch("https://speechtotext-2.onrender.com/",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
+  const addData = async (speechText, audioUrl) => {
+    try {
+      const response = await fetch("https://speechtotext-2.onrender.com/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        body:JSON.stringify({
-          "text":speechText,
-          "audioUrl":audioUrl
-        })
-      })
+        body: JSON.stringify({
+          text: speechText,
+          audioUrl: audioUrl,
+        }),
+      });
 
-      let result=await response.json();
+      let result = await response.json();
 
-      if(response.ok){
+      if (response.ok) {
         console.log(result, "data added successfully");
-        alert( "data added successfully")
+        alert("data added successfully");
       }
-    }
-    catch(e){
+    } catch (e) {
       console.log(e);
-      alert("Error occurred while saving data in the DB")
+      alert("Error occurred while saving data in the DB");
     }
-  }
+  };
 
   const transcribeAudio = async () => {
     if (!file) {
@@ -94,7 +91,6 @@ function SpeechToText() {
     setUploading(true);
 
     try {
-      // Step 1: Upload
       const uploadRes = await fetch("https://api.assemblyai.com/v2/upload", {
         method: "POST",
         headers: {
@@ -105,7 +101,6 @@ function SpeechToText() {
       const uploadData = await uploadRes.json();
       const audioUrl = uploadData.upload_url;
 
-      // Step 2: Start transcription
       const transcriptRes = await fetch(
         "https://api.assemblyai.com/v2/transcript",
         {
@@ -121,7 +116,6 @@ function SpeechToText() {
       const transcriptData = await transcriptRes.json();
       const transcriptId = transcriptData.id;
 
-      // Step 3: Polling for completion
       let completed = false;
       let finalText = "";
 
@@ -138,13 +132,12 @@ function SpeechToText() {
         if (result.status === "completed") {
           finalText = result.text;
           completed = true;
-          addData(finalText,audioURL);
-
+          addData(finalText, audioURL);
         } else if (result.status === "error") {
           throw new Error("Transcription failed");
         }
 
-        await new Promise((res) => setTimeout(res, 3000)); // wait 3 sec
+        await new Promise((res) => setTimeout(res, 3000));
       }
 
       setTranscript(finalText);
@@ -160,9 +153,12 @@ function SpeechToText() {
     <div className="flex justify-center mt-[3rem]">
       <div className="flex flex-col justify-start items-center gap-5 w-[25rem] h-[32rem] bg-white py-[2rem] px-[1rem] shadow-2xl rounded-2xl">
         <h1 className="text-3xl font-semibold">🎙️ Speech to Text</h1>
+
         <div className="flex justify-between gap-4 w-full">
           <label
-            className={`h-[3rem] w-[50%] border border-gray-400 bg-white cursor-pointer px-4 py-2 text-center ${isRecording ? "opacity-50 cursor-not-allowed" : ""}  ${file ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`h-[3rem] w-[50%] border border-gray-400 bg-white cursor-pointer px-4 py-2 text-center ${
+              isRecording ? "opacity-50 cursor-not-allowed" : ""
+            }  ${file ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             <span>📁 Upload File</span>
             <input
@@ -176,7 +172,7 @@ function SpeechToText() {
           {isRecording ? (
             <button
               type="button"
-              className="h-[3rem]  w-[50%] bg-white border border-gray-400 cursor-pointer"
+              className="h-[3rem] w-[50%] bg-white border border-gray-400 cursor-pointer"
               onClick={stopRecording}
             >
               Stop Recording
@@ -184,7 +180,9 @@ function SpeechToText() {
           ) : (
             <button
               type="button"
-              className={`h-[3rem]  w-[50%] bg-white border border-gray-400 cursor-pointer ${file ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`h-[3rem] w-[50%] bg-white border border-gray-400 cursor-pointer ${
+                file ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               onClick={startRecording}
               disabled={file}
             >
@@ -192,7 +190,7 @@ function SpeechToText() {
             </button>
           )}
         </div>
-        
+
         {audioURL && (
           <div className="w-full">
             <p className="text-sm text-gray-600 mb-2">🎧 Preview:</p>
@@ -203,6 +201,7 @@ function SpeechToText() {
             />
           </div>
         )}
+
         <button
           type="button"
           disabled={uploading || transcript}
@@ -213,6 +212,7 @@ function SpeechToText() {
         >
           {uploading ? "Converting..." : "Convert"}
         </button>
+
         <div className="w-full max-h-[40%] h-full border border-gray-400 bg-white p-2 overflow-y-auto rounded shadow-inner">
           {transcript === null ? (
             <p className="text-gray-500 italic">Transcript will appear here.</p>
@@ -222,13 +222,30 @@ function SpeechToText() {
             <p className="whitespace-pre-wrap">{transcript}</p>
           )}
         </div>
-        <button className="w-[6rem] min-h-[2rem] bg-red-500 text-white text-sm font-semibold rounded-lg cursor-pointer" onClick={()=>{
-          setFile(false)
-          setTranscript(null)
-          setAudioURL("")
-        }}>Clear Text</button>
+
+        {/* 👇 Buttons: Clear + History */}
+        <div className="flex justify-between gap-3 w-full">
+          <button
+            className="w-[50%] min-h-[2rem] bg-red-500 text-white text-sm font-semibold rounded-lg cursor-pointer"
+            onClick={() => {
+              setFile(null);
+              setTranscript(null);
+              setAudioURL("");
+            }}
+          >
+            Clear Text
+          </button>
+
+          <button
+            className="w-[50%] min-h-[2rem] bg-green-600 text-white text-sm font-semibold rounded-lg cursor-pointer"
+            onClick={() => {
+              navigate("/history")
+            }}
+          >
+            📜 History
+          </button>
+        </div>
       </div>
-      
     </div>
   );
 }
